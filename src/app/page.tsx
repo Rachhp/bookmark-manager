@@ -1,15 +1,37 @@
 'use client'
-import { useEffect, useState } from 'react'
+// 1. Cleaned up imports (removed duplicates)
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase'
 import { useRouter } from 'next/navigation'
+
+// 2. Interface defined clearly for TypeScript
+interface Bookmark {
+  id: string;
+  title: string;
+  url: string;
+  created_at?: string;
+}
 
 export default function Home() {
   const [loading, setLoading] = useState(true)
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
-  const [bookmarks, setBookmarks] = useState<any[]>([])
-  const supabase = createClient()
+  
+  // 3. Specified the Bookmark type here to fix the 'any' error
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+
+  // 4. useMemo ensures the supabase client is stable across renders
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+
+  // 5. fetchBookmarks wrapped in useCallback to satisfy useEffect dependencies
+  const fetchBookmarks = useCallback(async () => {
+    const { data } = await supabase
+      .from('bookmarks')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (data) setBookmarks(data as Bookmark[])
+  }, [supabase])
 
   useEffect(() => {
     const checkUser = async () => {
@@ -23,14 +45,13 @@ export default function Home() {
     }
     checkUser()
 
-    // REAL-TIME LISTENER: Handles both INSERT and DELETE instantly
     const channel = supabase
       .channel('realtime-bookmarks')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'bookmarks' }, 
         (payload) => {
           if (payload.eventType === 'INSERT') {
-            setBookmarks((prev) => [payload.new, ...prev])
+            setBookmarks((prev) => [payload.new as Bookmark, ...prev])
           } else if (payload.eventType === 'DELETE') {
             setBookmarks((prev) => prev.filter(b => b.id !== payload.old.id))
           }
@@ -41,15 +62,7 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  const fetchBookmarks = async () => {
-    const { data } = await supabase
-      .from('bookmarks')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (data) setBookmarks(data)
-  }
+  }, [supabase, router, fetchBookmarks]) 
 
   const addBookmark = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,7 +84,7 @@ export default function Home() {
     }
 
     if (data) {
-      setBookmarks((prev) => [data[0], ...prev])
+      setBookmarks((prev) => [data[0] as Bookmark, ...prev])
     }
   }
 
@@ -91,7 +104,6 @@ export default function Home() {
   return (
     <main className="max-w-2xl mx-auto p-6 sm:p-12 font-[family-name:var(--font-geist-sans)] text-white bg-black min-h-screen">
       
-      {/* Header Area */}
       <div className="flex justify-between items-center mb-12">
         <h1 className="text-4xl font-extrabold tracking-tight">Smart Bookmarks</h1>
         <button 
@@ -102,7 +114,6 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Input Section */}
       <section className="mb-12">
         <form onSubmit={addBookmark} className="flex flex-col gap-5 bg-[#111] p-8 rounded-[2.5rem] border border-gray-800 shadow-2xl">
           <h2 className="text-xl font-bold text-gray-100">Add New Link</h2>
@@ -124,7 +135,6 @@ export default function Home() {
         </form>
       </section>
 
-      {/* List Section */}
       <div className="space-y-6">
         <h2 className="text-xl font-bold border-b border-gray-800 pb-4 flex justify-between items-center text-gray-400">
           Your Saved Links
@@ -147,7 +157,6 @@ export default function Home() {
                 </a>
               </div>
               
-              {/* Permanent Red Delete Button */}
               <button 
                 onClick={() => deleteBookmark(b.id)}
                 className="bg-red-50 text-red-500 p-3 rounded-2xl hover:bg-red-500 hover:text-white transition-all shrink-0 shadow-sm"
