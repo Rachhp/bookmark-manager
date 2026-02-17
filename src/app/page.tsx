@@ -1,101 +1,163 @@
-import Image from "next/image";
+'use client'
+import { useEffect, useState } from 'react'
+import { createClient } from '@/utils/supabase'
+import { useRouter } from 'next/navigation'
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [loading, setLoading] = useState(true)
+  const [title, setTitle] = useState('')
+  const [url, setUrl] = useState('')
+  const [bookmarks, setBookmarks] = useState<any[]>([])
+  const supabase = createClient()
+  const router = useRouter()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.push('/login')
+      } else {
+        setLoading(false)
+        fetchBookmarks()
+      }
+    }
+    checkUser()
+
+    // REAL-TIME LISTENER: Handles both INSERT and DELETE instantly
+    const channel = supabase
+      .channel('realtime-bookmarks')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bookmarks' }, 
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setBookmarks((prev) => [payload.new, ...prev])
+          } else if (payload.eventType === 'DELETE') {
+            setBookmarks((prev) => prev.filter(b => b.id !== payload.old.id))
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  const fetchBookmarks = async () => {
+    const { data } = await supabase
+      .from('bookmarks')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (data) setBookmarks(data)
+  }
+
+ const addBookmark = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // 1. Format the URL
+    const formattedUrl = url.startsWith('http') ? url : `https://${url}`
+    
+    // 2. Clear inputs immediately for a better user experience
+    const savedTitle = title
+    const savedUrl = formattedUrl
+    setTitle('')
+    setUrl('')
+
+    // 3. Insert into Supabase
+    const { data, error } = await supabase
+      .from('bookmarks')
+      .insert([{ title: savedTitle, url: savedUrl }])
+      .select() 
+
+    if (error) {
+      alert("Error saving: " + error.message)
+      return
+    }
+
+    // 4. Update the list locally so it shows up instantly without refresh
+    if (data) {
+      setBookmarks((prev) => [data[0], ...prev])
+    }
+  }
+
+  const deleteBookmark = async (id: string) => {
+    const { error } = await supabase
+      .from('bookmarks')
+      .delete()
+      .eq('id', id)
+    
+    if (error) {
+      alert("Error deleting bookmark")
+    }
+  }
+
+  if (loading) return <div className="flex h-screen items-center justify-center font-bold text-xl">Loading...</div>
+
+  return (
+    <main className="max-w-2xl mx-auto p-8 font-[family-name:var(--font-geist-sans)] text-black">
+      {/* Header Area */}
+      <div className="flex justify-between items-center mb-12">
+        <h1 className="text-4xl font-extrabold tracking-tight">Smart Bookmarks</h1>
+        <button 
+          onClick={() => supabase.auth.signOut().then(() => router.push('/login'))}
+          className="text-sm font-semibold bg-red-50 text-red-600 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors"
+        >
+          Sign Out
+        </button>
+      </div>
+
+      {/* Input Section */}
+      <section className="mb-12">
+        <form onSubmit={addBookmark} className="flex flex-col gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-lg">
+          <h2 className="text-lg font-bold text-gray-700">Add New Link</h2>
+          <div className="grid grid-cols-1 gap-3">
+            <input 
+              type="text" placeholder="Title (e.g., GitHub)"
+              value={title} onChange={(e) => setTitle(e.target.value)}
+              className="p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all" required 
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+            <input 
+              type="text" placeholder="URL (example.com)"
+              value={url} onChange={(e) => setUrl(e.target.value)}
+              className="p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-black outline-none transition-all" required 
+            />
+          </div>
+          <button type="submit" className="bg-black text-white font-bold p-3 rounded-xl hover:opacity-90 transition-all active:scale-95">
+            Save Bookmark
+          </button>
+        </form>
+      </section>
+
+      {/* List Section */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold border-b pb-2 flex justify-between">
+          Your Saved Links
+          <span className="bg-gray-100 px-2 py-1 rounded text-xs">{bookmarks.length}</span>
+        </h2>
+        
+        {bookmarks.length === 0 && (
+          <div className="text-center py-10 text-gray-400">
+            <p className="italic">No bookmarks yet. Start by adding one above!</p>
+          </div>
+        )}
+
+        {bookmarks.map((b) => (
+          <div key={b.id} className="group p-5 border border-gray-100 rounded-2xl flex justify-between items-center shadow-sm hover:shadow-md transition-all bg-white">
+            <div className="overflow-hidden mr-4">
+              <h3 className="font-bold text-lg truncate text-gray-800">{b.title}</h3>
+              <a href={b.url} target="_blank" className="text-blue-500 hover:text-blue-700 text-sm truncate block transition-colors">
+                {b.url}
+              </a>
+            </div>
+            <button 
+              onClick={() => deleteBookmark(b.id)}
+              className="opacity-0 group-hover:opacity-100 transition-opacity bg-red-50 text-red-500 p-2 rounded-lg hover:bg-red-500 hover:text-white text-xs font-bold"
+            >
+              DELETE
+            </button>
+          </div>
+        ))}
+      </div>
+    </main>
+  )
 }
