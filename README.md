@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 Smart Bookmark Manager (Full-Stack Challenge)
 
-## Getting Started
+A real-time, secure bookmark management application built with **Next.js**, **Supabase**, and **Tailwind CSS**. 
 
-First, run the development server:
+## ⚡ The "4-Hour" Challenge
+I completed the technical development of this project in just **4 hours** during my office breaks. Coming from a **3-year background in .NET and Python**, I used this challenge to prove how quickly I can adapt to a modern stack (Next.js/Supabase) by using **AI (Gemini)** as a technical pair-programmer to accelerate my transition.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🔗 Links
+- **Live Demo:** [https://bookmark-manager-rho-teal.vercel.app/login](https://bookmark-manager-rho-teal.vercel.app/login)
+- **Primary Tech:** Next.js (App Router), Supabase Auth & DB, Tailwind CSS, Vercel.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Key Features
+- **Google OAuth:** Secure login via Google Cloud.
+- **Real-Time Updates:** Uses PostgreSQL Change Data Capture (CDC) to update the UI instantly when bookmarks are added or deleted without a page refresh.
+- **Row Level Security (RLS):** Fully secure database architecture where users can only access their own data.
+- **Production-Ready:** Optimized with React hooks (`useCallback`, `useMemo`) to ensure stable performance and zero-defect deployment.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Challenges & Solutions
+- **The Learning Curve:** Shifting from .NET's structured backend to Supabase's real-time listeners. I solved this by mapping my knowledge of SQL and WebSockets to the Supabase client logic.
+- **Deployment:** Resolving TypeScript interface errors during the Vercel build process. I fixed this by implementing strict type-checking for the bookmark objects.
+- **Hardware Constraints:** Developed on a PC system and recorded the walkthrough via mobile/tablet due to lack of a personal laptop at home, showing my resourcefulness in meeting deadlines.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 👩‍💻 About Me
+I am a Full-Stack Developer with 3+ years of experience in industrial automation (including fingerprint and facial recognition modules). I am passionate about pivoting my expertise in system reliability into the modern Web and AI/ML space.
